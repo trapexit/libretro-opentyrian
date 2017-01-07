@@ -23,6 +23,8 @@
 #include "opentyr.h"
 #include "params.h"
 
+#include <stdlib.h>
+
 float music_volume = 0, sample_volume = 0;
 
 bool music_stopped = true;
@@ -130,6 +132,14 @@ void audio_cb( void *user_data, unsigned char *sdl_buffer, int howmuch )
 		for (int smp = 0; smp < qu; smp++)
 		{
 			feedme[smp] *= music_volume;
+		}
+	}
+	else
+	{
+		int qu = howmuch / BYTES_PER_SAMPLE;
+		for (int smp = 0; smp < qu; smp++)
+		{
+			feedme[smp] = 0;
 		}
 	}
 	
