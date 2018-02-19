@@ -21,21 +21,24 @@
 
 #include "opentyr.h"
 
-#include "SDL.h"
+#include <SDL.h>
 
+#include <stdbool.h>
 
 #define SDL_POLL_INTERVAL 5
 
 extern JE_boolean ESCPressed;
 extern JE_boolean newkey, newmouse, keydown, mousedown;
-extern SDLKey lastkey_sym;
-extern SDLMod lastkey_mod;
-extern unsigned char lastkey_char;
+extern SDL_Scancode lastkey_scan;
+extern SDL_Keymod lastkey_mod;
 extern Uint8 lastmouse_but;
 extern Uint16 lastmouse_x, lastmouse_y;
 extern JE_boolean mouse_pressed[3];
 extern Uint16 mouse_x, mouse_y;
-extern Uint8 keysactive[SDLK_LAST];
+extern Uint8 keysactive[SDL_NUM_SCANCODES];
+
+extern bool new_text;
+extern char last_text[SDL_TEXTINPUTEVENT_TEXT_SIZE];
 
 extern bool input_grab_enabled;
 

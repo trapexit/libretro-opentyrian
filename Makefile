@@ -68,11 +68,11 @@ CFLAGS += -O2
 LDFLAGS := 
 LDLIBS := 
 
-SDL_CPPFLAGS := $(shell $(PKG_CONFIG) sdl --cflags)
-SDL_LDFLAGS := $(shell $(PKG_CONFIG) sdl --libs-only-L --libs-only-other)
-SDL_LDLIBS := $(shell $(PKG_CONFIG) sdl --libs-only-l)
+SDL_CPPFLAGS := $(shell $(PKG_CONFIG) sdl2 --cflags)
+SDL_LDFLAGS := $(shell $(PKG_CONFIG) sdl2 --libs-only-L --libs-only-other)
+SDL_LDLIBS := $(shell $(PKG_CONFIG) sdl2 --libs-only-l)
 ifeq ($(WITH_NETWORK), true)
-    SDL_LDLIBS += -lSDL_net
+    SDL_LDLIBS += -lSDL2_net
 endif
 
 ALL_CPPFLAGS = -DTARGET_$(PLATFORM) \
