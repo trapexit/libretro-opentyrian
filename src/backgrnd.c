@@ -1,4 +1,4 @@
-/* 
+/*
  * OpenTyrian: A modern cross-platform port of Tyrian
  * Copyright (C) 2007-2009  The OpenTyrian Development Team
  *
@@ -47,9 +47,9 @@ void JE_darkenBackground( JE_word neat )  /* wild detail level */
 {
 	Uint8 *s = VGAScreen->pixels; /* screen pointer, 8-bit specific */
 	int x, y;
-	
+
 	s += 24;
-	
+
 	for (y = 184; y; y--)
 	{
 		for (x = 264; x; x--)
@@ -61,60 +61,81 @@ void JE_darkenBackground( JE_word neat )  /* wild detail level */
 	}
 }
 
-void blit_background_row( SDL_Surface *surface, int x, int y, Uint8 **map )
+void
+blit_background_row(Uint8  *pixels,
+                    int     pitch,
+                    int     x,
+                    int     y,
+                    int     w,
+                    int     h,
+                    Uint8 **map)
 {
 	assert(surface->format->BitsPerPixel == 8);
-	
-	Uint8 *pixels = (Uint8 *)surface->pixels + (y * surface->pitch) + x,
-	      *pixels_ll = (Uint8 *)surface->pixels,  // lower limit
-	      *pixels_ul = (Uint8 *)surface->pixels + (surface->h * surface->pitch);  // upper limit
-	
-	for (int y = 0; y < 28; y++)
+
+        Uint8 *pixels_ll;
+        Uint8 *pixels_ul;
+
+        pixels_ll  = pixels;
+        pixels_ul  = pixels + (h * pitch);
+        pixels    += ((y * pitch) + x);
+
+	for (int j = 0; j < 28; j++)
 	{
 		// not drawing on screen yet; skip y
 		if ((pixels + (12 * 24)) < pixels_ll)
 		{
-			pixels += surface->pitch;
+			pixels += pitch;
 			continue;
 		}
-		
+
 		for (int tile = 0; tile < 12; tile++)
 		{
 			Uint8 *data = *(map + tile);
-			
+
 			// no tile; skip tile
 			if (data == NULL)
 			{
 				pixels += 24;
 				continue;
 			}
-			
-			data += y * 24;
-			
-			for (int x = 24; x; x--)
+
+			data += j * 24;
+
+			for (int i = 24; i; i--)
 			{
 				if (pixels >= pixels_ul)
 					return;
 				if (pixels >= pixels_ll && *data != 0)
 					*pixels = *data;
-				
+
 				pixels++;
 				data++;
 			}
 		}
-		
-		pixels += surface->pitch - 12 * 24;
+
+		pixels += pitch - 12 * 24;
 	}
+}
+
+void blit_background_row_sdl( SDL_Surface *surface, int x, int y, Uint8 **map )
+{
+  blit_background_row(surface->pixels,
+                      surface->pitch,
+                      x,
+                      y,
+                      surface->w,
+                      surface->h,
+                      map);
 }
 
 void blit_background_row_blend( SDL_Surface *surface, int x, int y, Uint8 **map )
 {
 	assert(surface->format->BitsPerPixel == 8);
-	
+
 	Uint8 *pixels = (Uint8 *)surface->pixels + (y * surface->pitch) + x,
 	      *pixels_ll = (Uint8 *)surface->pixels,  // lower limit
 	      *pixels_ul = (Uint8 *)surface->pixels + (surface->h * surface->pitch);  // upper limit
-	
+
 	for (int y = 0; y < 28; y++)
 	{
 		// not drawing on screen yet; skip y
@@ -123,32 +144,32 @@ void blit_background_row_blend( SDL_Surface *surface, int x, int y, Uint8 **map 
 			pixels += surface->pitch;
 			continue;
 		}
-		
+
 		for (int tile = 0; tile < 12; tile++)
 		{
 			Uint8 *data = *(map + tile);
-			
+
 			// no tile; skip tile
 			if (data == NULL)
 			{
 				pixels += 24;
 				continue;
 			}
-			
+
 			data += y * 24;
-			
+
 			for (int x = 24; x; x--)
 			{
 				if (pixels >= pixels_ul)
 					return;
 				if (pixels >= pixels_ll && *data != 0)
 					*pixels = (*data & 0xf0) | (((*pixels & 0x0f) + (*data & 0x0f)) / 2);
-				
+
 				pixels++;
 				data++;
 			}
 		}
-		
+
 		pixels += surface->pitch - 12 * 24;
 	}
 }
@@ -156,13 +177,13 @@ void blit_background_row_blend( SDL_Surface *surface, int x, int y, Uint8 **map 
 void draw_background_1( SDL_Surface *surface )
 {
 	SDL_FillRect(surface, NULL, 0);
-	
+
 	Uint8 **map = (Uint8 **)mapYPos + mapXbpPos - 12;
-	
+
 	for (int i = -1; i < 7; i++)
 	{
-		blit_background_row(surface, mapXPos, (i * 28) + backPos, map);
-		
+		blit_background_row_sdl(surface, mapXPos, (i * 28) + backPos, map);
+
 		map += 14;
 	}
 }
@@ -171,29 +192,29 @@ void draw_background_2( SDL_Surface *surface )
 {
 	if (map2YDelayMax > 1 && backMove2 < 2)
 		backMove2 = (map2YDelay == 1) ? 1 : 0;
-	
+
 	if (background2 != 0)
 	{
 		// water effect combines background 1 and 2 by syncronizing the x coordinate
 		int x = smoothies[1] ? mapXPos : mapX2Pos;
-		
+
 		Uint8 **map = (Uint8 **)mapY2Pos + (smoothies[1] ? mapXbpPos : mapX2bpPos) - 12;
-		
+
 		for (int i = -1; i < 7; i++)
 		{
-			blit_background_row(surface, x, (i * 28) + backPos2, map);
-			
+			blit_background_row_sdl(surface, x, (i * 28) + backPos2, map);
+
 			map += 14;
 		}
 	}
-	
+
 	/*Set Movement of background*/
 	if (--map2YDelay == 0)
 	{
 		map2YDelay = map2YDelayMax;
-		
+
 		backPos2 += backMove2;
-		
+
 		if (backPos2 >  27)
 		{
 			backPos2 -= 28;
@@ -207,23 +228,23 @@ void draw_background_2_blend( SDL_Surface *surface )
 {
 	if (map2YDelayMax > 1 && backMove2 < 2)
 		backMove2 = (map2YDelay == 1) ? 1 : 0;
-	
+
 	Uint8 **map = (Uint8 **)mapY2Pos + mapX2bpPos - 12;
-	
+
 	for (int i = -1; i < 7; i++)
 	{
 		blit_background_row_blend(surface, mapX2Pos, (i * 28) + backPos2, map);
-		
+
 		map += 14;
 	}
-	
+
 	/*Set Movement of background*/
 	if (--map2YDelay == 0)
 	{
 		map2YDelay = map2YDelayMax;
-		
+
 		backPos2 += backMove2;
-		
+
 		if (backPos2 >  27)
 		{
 			backPos2 -= 28;
@@ -237,20 +258,20 @@ void draw_background_3( SDL_Surface *surface )
 {
 	/* Movement of background */
 	backPos3 += backMove3;
-	
+
 	if (backPos3 > 27)
 	{
 		backPos3 -= 28;
 		mapY3--;
 		mapY3Pos -= 15;   /*Map Width*/
 	}
-	
+
 	Uint8 **map = (Uint8 **)mapY3Pos + mapX3bpPos - 12;
-	
+
 	for (int i = -1; i < 7; i++)
 	{
-		blit_background_row(surface, mapX3Pos, (i * 28) + backPos3, map);
-		
+		blit_background_row_sdl(surface, mapX3Pos, (i * 28) + backPos3, map);
+
 		map += 15;
 	}
 }
@@ -260,7 +281,7 @@ void JE_filterScreen( JE_shortint col, JE_shortint int_)
 	Uint8 *s = NULL; /* screen pointer, 8-bit specific */
 	int x, y;
 	unsigned int temp;
-	
+
 	if (filterFade)
 	{
 		levelBrightness += levelBrightnessChg;
@@ -276,14 +297,14 @@ void JE_filterScreen( JE_shortint col, JE_shortint int_)
 			levelBrightness = -99;
 		}
 	}
-	
+
 	if (col != -99 && filtrationAvail)
 	{
 		s = VGAScreen->pixels;
 		s += 24;
-		
+
 		col <<= 4;
-		
+
 		for (y = 184; y; y--)
 		{
 			for (x = 264; x; x--)
@@ -294,12 +315,12 @@ void JE_filterScreen( JE_shortint col, JE_shortint int_)
 			s += VGAScreen->pitch - 264;
 		}
 	}
-	
+
 	if (int_ != -99 && explosionTransparent)
 	{
 		s = VGAScreen->pixels;
 		s += 24;
-		
+
 		for (y = 184; y; y--)
 		{
 			for (x = 264; x; x--)
@@ -321,45 +342,45 @@ void JE_checkSmoothies( void )
 void lava_filter( SDL_Surface *dst, SDL_Surface *src )
 {
 	assert(src->format->BitsPerPixel == 8 && dst->format->BitsPerPixel == 8);
-	
+
 	/* we don't need to check for over-reading the pixel surfaces since we only
 	 * read from the top 185+1 scanlines, and there should be 320 */
-	
+
 	const int dst_pitch = dst->pitch;
 	Uint8 *dst_pixel = (Uint8 *)dst->pixels + (185 * dst_pitch);
 	const Uint8 * const dst_pixel_ll = (Uint8 *)dst->pixels;  // lower limit
-	
+
 	const int src_pitch = src->pitch;
 	const Uint8 *src_pixel = (Uint8 *)src->pixels + (185 * src->pitch);
 	const Uint8 * const src_pixel_ll = (Uint8 *)src->pixels;  // lower limit
-	
+
 	int w = 320 * 185 - 1;
-	
+
 	for (int y = 185 - 1; y >= 0; --y)
 	{
 		dst_pixel -= (dst_pitch - 320);  // in case pitch is not 320
 		src_pixel -= (src_pitch - 320);  // in case pitch is not 320
-		
+
 		for (int x = 320 - 1; x >= 0; x -= 8)
 		{
 			int waver = abs(((w >> 9) & 0x0f) - 8) - 1;
 			w -= 8;
-			
+
 			for (int xi = 8 - 1; xi >= 0; --xi)
 			{
 				--dst_pixel;
 				--src_pixel;
-				
+
 				// value is average value of source pixel (2x), destination pixel above, and destination pixel below (all with waver)
 				// hue is red
 				Uint8 value = 0;
-				
+
 				if (src_pixel + waver >= src_pixel_ll)
 					value += (*(src_pixel + waver) & 0x0f) * 2;
 				value += *(dst_pixel + waver + dst_pitch) & 0x0f;
 				if (dst_pixel + waver - dst_pitch >= dst_pixel_ll)
 					value += *(dst_pixel + waver - dst_pitch) & 0x0f;
-				
+
 				*dst_pixel = (value / 4) | 0x70;
 			}
 		}
@@ -369,34 +390,34 @@ void lava_filter( SDL_Surface *dst, SDL_Surface *src )
 void water_filter( SDL_Surface *dst, SDL_Surface *src )
 {
 	assert(src->format->BitsPerPixel == 8 && dst->format->BitsPerPixel == 8);
-	
+
 	Uint8 hue = smoothie_data[1] << 4;
-	
+
 	/* we don't need to check for over-reading the pixel surfaces since we only
 	 * read from the top 185+1 scanlines, and there should be 320 */
-	
+
 	const int dst_pitch = dst->pitch;
 	Uint8 *dst_pixel = (Uint8 *)dst->pixels + (185 * dst_pitch);
-	
+
 	const Uint8 *src_pixel = (Uint8 *)src->pixels + (185 * src->pitch);
-	
+
 	int w = 320 * 185 - 1;
-	
+
 	for (int y = 185 - 1; y >= 0; --y)
 	{
 		dst_pixel -= (dst_pitch - 320);  // in case pitch is not 320
 		src_pixel -= (src->pitch - 320);  // in case pitch is not 320
-		
+
 		for (int x = 320 - 1; x >= 0; x -= 8)
 		{
 			int waver = abs(((w >> 10) & 0x07) - 4) - 1;
 			w -= 8;
-			
+
 			for (int xi = 8 - 1; xi >= 0; --xi)
 			{
 				--dst_pixel;
 				--src_pixel;
-				
+
 				// pixel is copied from source if not blue
 				// otherwise, value is average of value of source pixel and destination pixel below (with waver)
 				if ((*src_pixel & 0x30) == 0)
@@ -417,24 +438,24 @@ void water_filter( SDL_Surface *dst, SDL_Surface *src )
 void iced_blur_filter( SDL_Surface *dst, SDL_Surface *src )
 {
 	assert(src->format->BitsPerPixel == 8 && dst->format->BitsPerPixel == 8);
-	
+
 	Uint8 *dst_pixel = dst->pixels;
 	const Uint8 *src_pixel = src->pixels;
-	
+
 	for (int y = 0; y < 184; ++y)
 	{
 		for (int x = 0; x < 320; ++x)
 		{
 			// value is average value of source pixel and destination pixel
 			// hue is icy blue
-			
+
 			const Uint8 value = (*src_pixel & 0x0f) + (*dst_pixel & 0x0f);
 			*dst_pixel = (value / 2) | 0x80;
-			
+
 			++dst_pixel;
 			++src_pixel;
 		}
-		
+
 		dst_pixel += (dst->pitch - 320);  // in case pitch is not 320
 		src_pixel += (src->pitch - 320);  // in case pitch is not 320
 	}
@@ -443,24 +464,24 @@ void iced_blur_filter( SDL_Surface *dst, SDL_Surface *src )
 void blur_filter( SDL_Surface *dst, SDL_Surface *src )
 {
 	assert(src->format->BitsPerPixel == 8 && dst->format->BitsPerPixel == 8);
-	
+
 	Uint8 *dst_pixel = dst->pixels;
 	const Uint8 *src_pixel = src->pixels;
-	
+
 	for (int y = 0; y < 184; ++y)
 	{
 		for (int x = 0; x < 320; ++x)
 		{
 			// value is average value of source pixel and destination pixel
 			// hue is source pixel hue
-			
+
 			const Uint8 value = (*src_pixel & 0x0f) + (*dst_pixel & 0x0f);
 			*dst_pixel = (value / 2) | (*src_pixel & 0xf0);
-			
+
 			++dst_pixel;
 			++src_pixel;
 		}
-		
+
 		dst_pixel += (dst->pitch - 320);  // in case pitch is not 320
 		src_pixel += (src->pitch - 320);  // in case pitch is not 320
 	}

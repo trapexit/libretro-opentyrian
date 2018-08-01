@@ -38,7 +38,6 @@ extern int starfield_speed;
 
 void JE_darkenBackground( JE_word neat );
 
-void blit_background_row( SDL_Surface *surface, int x, int y, Uint8 **map );
 void blit_background_row_blend( SDL_Surface *surface, int x, int y, Uint8 **map );
 
 void draw_background_1( SDL_Surface *surface );
